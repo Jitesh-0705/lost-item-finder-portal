@@ -7,21 +7,46 @@ interface Match {
   confidence: number;
   status: string;
   created_at: string;
-  lost_items?: { title: string };
-  found_items?: { title: string };
+  lost_items?: { title: string } | null;
+  found_items?: { title: string } | null;
 }
 
 export default function Matches() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
-  const [dialogAction, setDialogAction] = useState<"confirm" | "reject" | null>(null);
+  const [dialogAction, setDialogAction] = useState<"confirm" | "reject" | null>(
+    null
+  );
 
   const loadMatches = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("matches")
-      .select("id, confidence, status, created_at, lost_items(title), found_items(title)")
+      .select(
+        "id, confidence, status, created_at, lost_items(title), found_items(title)"
+      )
       .order("created_at", { ascending: false });
-    setMatches(data || []);
+
+    if (error) {
+      console.error("Error fetching matches:", error);
+      return;
+    }
+
+    // 🔧 Normalize the Supabase data structure
+    const formatted: Match[] =
+      data?.map((m: any) => ({
+        id: m.id,
+        confidence: m.confidence,
+        status: m.status,
+        created_at: m.created_at,
+        lost_items: Array.isArray(m.lost_items)
+          ? m.lost_items[0] || null
+          : m.lost_items,
+        found_items: Array.isArray(m.found_items)
+          ? m.found_items[0] || null
+          : m.found_items,
+      })) || [];
+
+    setMatches(formatted);
   };
 
   const updateStatus = async (id: number, status: string) => {
@@ -53,8 +78,8 @@ export default function Matches() {
             {matches.map((m) => (
               <tr key={m.id} className="border-t">
                 <td className="py-3 px-4">{m.id}</td>
-                <td className="py-3 px-4">{m.lost_items?.title}</td>
-                <td className="py-3 px-4">{m.found_items?.title}</td>
+                <td className="py-3 px-4">{m.lost_items?.title || "—"}</td>
+                <td className="py-3 px-4">{m.found_items?.title || "—"}</td>
                 <td className="py-3 px-4 text-indigo-600 font-semibold">
                   {(m.confidence * 100).toFixed(1)}%
                 </td>
@@ -100,7 +125,10 @@ export default function Matches() {
         onClose={() => setSelected(null)}
         onConfirm={() => {
           if (selected) {
-            updateStatus(selected, dialogAction === "confirm" ? "confirmed" : "rejected");
+            updateStatus(
+              selected,
+              dialogAction === "confirm" ? "confirmed" : "rejected"
+            );
             setSelected(null);
           }
         }}
