@@ -31,7 +31,7 @@ export default function About() {
         Project Team
       </h2>
       <p className="text-gray-600">
-        Developed by <strong>[Your Name / Team Name]</strong> as a Final Year
+        Developed by <strong>Jitesh T , Bhagavathi Lingam A</strong> as a Final Year
         Project.
       </p>
     </div>
